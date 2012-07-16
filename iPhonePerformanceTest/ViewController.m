@@ -100,30 +100,47 @@
 
 - (IBAction)runFullBenchmark:(id)sender
 {
-    NSMutableString *data = [NSMutableString stringWithString:@""];
-    [data appendFormat:@"['x', 'BLAS', 'C'],\n"];
+    int numTests = 10;
+    float tmpBLAS[numTests];
+    float tmpNBLAS[numTests];
     
-    if(segControl.selectedSegmentIndex == 0)
+    // -----------------------------------------
+    // affine transform test
     {
-        for(int i = 0; i <= 4; ++i)
+        NSLog(@"affine transform test");
+        NSMutableString *data = [NSMutableString stringWithString:@""];
+        [data appendFormat:@"N, BLAS, C\n"];
+        
+        for(int i = 0; i <= 5; ++i)
         {
-            for(int j = 1; j < 10; ++j)
+            for(int j = 0; j < 10; ++j)
             {
                 dataSize = (int)pow(10, i) + j*pow(10, i);
                 slider.value = dataSize;
+                for(int k = 0; k < numTests; ++k)
+                {
+                    double time = 0;
+                    
+                    // with BLAS
+                    time = [benchmark benchmarkAffineTransform:dataSize :YES];
+                    tmpBLAS[k] = (dataSize/(time*1E3));
+                    
+                    // without BLAS
+                    time = [benchmark benchmarkAffineTransform:dataSize :NO];
+                    tmpNBLAS[k] = (dataSize/(time*1E3));
+                }
                 
-                [data appendFormat:@"['%i', ",dataSize];
-                double time = 0;
+                float blas = 0;
+                float nblas = 0;
+                for(int k = 0; k < numTests; ++k)
+                {
+                    blas += tmpBLAS[k];
+                    nblas += tmpNBLAS[k];
+                }
                 
-                // with BLAS
-                time = [benchmark benchmarkAffineTransform:dataSize :YES];
-                [data appendFormat:@"%f, ",(dataSize/(time*1E3))];
+                [data appendFormat:@"%i, %f, %f \n", dataSize, blas/numTests, nblas/numTests];
                 
-                // without BLAS
-                time = [benchmark benchmarkAffineTransform:dataSize :NO];
-                [data appendFormat:@"%f",(dataSize/(time*1E3))];
-                
-                [data appendString:@"],\n"];
+                NSLog(@"1 at step %i", dataSize);
             }
         }
         
@@ -136,28 +153,42 @@
         
     }
     
-    
-    if(segControl.selectedSegmentIndex == 1)
+    // -----------------------------------------
+    // determine the transformation matrix
     {
+        NSLog(@"determine the transformation matrix");
+        NSMutableString *data = [NSMutableString stringWithString:@""];
+        [data appendFormat:@"N, BLAS, C\n"];
+        
         for(int i = 0; i <= 3; ++i)
         {
-            for(int j = 1; j < 10; ++j)
+            for(int j = 0; j < 10; ++j)
             {
                 dataSize = (int)pow(10, i) + j*pow(10, i);
                 slider.value = dataSize;
+                for(int k = 0; k < numTests; ++k)
+                {
+                    double time = 0;
+                    
+                    // with BLAS
+                    time = [benchmark benchmarkDetermineTransform:dataSize :YES];
+                    tmpBLAS[k] = (dataSize/(time*1E3));
+                    
+                    // without BLAS
+                    time = [benchmark benchmarkDetermineTransform:dataSize :NO];
+                    tmpNBLAS[k] = (dataSize/(time*1E3));
+                }
+            
+                float blas = 0;
+                float nblas = 0;
+                for(int k = 0; k < numTests; ++k)
+                {
+                    blas += tmpBLAS[k];
+                    nblas += tmpNBLAS[k];
+                }
                 
-                [data appendFormat:@"['%i', ",dataSize];
-                double time = 0;
-                
-                // with BLAS
-                time = [benchmark benchmarkDetermineTransform:dataSize :YES];
-                [data appendFormat:@"%f, ",(dataSize/(time*1E3))];
-                
-                // without BLAS
-                time = [benchmark benchmarkDetermineTransform:dataSize :NO];
-                [data appendFormat:@"%f",(dataSize/(time*1E3))];
-                
-                [data appendString:@"],\n"];
+                [data appendFormat:@"%i, %f, %f \n", dataSize, blas/numTests, nblas/numTests];
+                NSLog(@"2 at step %i", dataSize);
             }
         }
         
@@ -167,7 +198,6 @@
         
         NSError *err;
         [data writeToFile:docFile atomically:NO encoding:NSUTF8StringEncoding error:&err];
-        
     }
 
 
